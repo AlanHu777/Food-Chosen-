@@ -92,6 +92,14 @@
   <button onclick="addOptions()">新增</button>
   <button onclick="clearOptions()">清除</button>
   <button onclick="spinWheel()">轉盤</button>
+  <br>
+  <label for="noRepeatRange">防止重複抽選時間：</label>
+  <select id="noRepeatRange">
+    <option value="0">不限</option>
+    <option value="1d">一天內</option>
+    <option value="7d">一週內</option>
+    <option value="30d">一個月內</option>
+  </select>
 
   <div id="wheelContainer">
     <div class="pointer"></div>
@@ -102,7 +110,6 @@
   <div id="optionList"><strong>目前選項：</strong><div id="optionItems"></div></div>
 
   <script>
-    // Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyDN4FPMp2NS3hTDVpKgyjXJS-zQIbTbmn8",
       authDomain: "food-chosen-55cc7.firebaseapp.com",
@@ -117,6 +124,8 @@
 
     let options = [];
     let currentRotation = 0;
+    let lastPicks = {};
+
     const wheelImg = document.getElementById("wheelImage");
 
     db.ref("options").on("value", snapshot => {
@@ -124,6 +133,19 @@
       options = Array.isArray(data) ? data : [];
       renderOptionList();
     });
+
+    db.ref("history").on("value", snapshot => {
+      const data = snapshot.val();
+      lastPicks = typeof data === 'object' ? data : {};
+    });
+
+    function getNoRepeatLimitMs() {
+      const range = document.getElementById("noRepeatRange").value;
+      if (range === "1d") return 86400000;
+      if (range === "7d") return 604800000;
+      if (range === "30d") return 2592000000;
+      return 0;
+    }
 
     function renderOptionList() {
       const container = document.getElementById("optionItems");
@@ -147,7 +169,8 @@
     }
 
     function deleteOption(index) {
-      if (index >= 0 && index < options.length) {
+      const name = options[index];
+      if (confirm(`確定要刪除「${name}」這個選項嗎？`)) {
         const updatedOptions = [...options];
         updatedOptions.splice(index, 1);
         db.ref("options").set(updatedOptions);
@@ -157,6 +180,7 @@
     function clearOptions() {
       if (confirm("確定要清除所有選項？")) {
         db.ref("options").set([]);
+        db.ref("history").set({});
         document.getElementById("result").textContent = '';
       }
     }
@@ -166,15 +190,27 @@
         alert("請先新增選項！");
         return;
       }
+      const limit = getNoRepeatLimitMs();
+      const now = Date.now();
+      const available = options.filter(o => !lastPicks[o] || (now - lastPicks[o]) > limit);
+
+      if (available.length === 0) {
+        alert("目前沒有可抽的選項（依照防重複設定）");
+        return;
+      }
+
       const fullSpins = 5;
       const degreesPerOption = 360 / options.length;
-      const selectedIndex = Math.floor(Math.random() * options.length);
+      const selectedOption = available[Math.floor(Math.random() * available.length)];
+      const selectedIndex = options.indexOf(selectedOption);
       const rotateTo = (360 - selectedIndex * degreesPerOption) + fullSpins * 360;
       currentRotation += rotateTo;
       wheelImg.style.transform = `rotate(${currentRotation}deg)`;
 
       setTimeout(() => {
-        document.getElementById("result").textContent = `結果：${options[selectedIndex]}`;
+        document.getElementById("result").textContent = `結果：${selectedOption}`;
+        lastPicks[selectedOption] = Date.now();
+        db.ref("history").set(lastPicks);
       }, 5000);
     }
   </script>
