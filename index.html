@@ -2,41 +2,96 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>食物選擇器（修正版）</title>
+  <title>食物選擇器</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: 'Roboto', sans-serif; background-color: #f4f4f4; color: #1c1b1f; text-align: center; padding: 20px; }
-    textarea { width: 100%; max-width: 500px; height: 100px; margin-top: 10px; }
-    button { margin: 5px; padding: 10px 16px; border: none; border-radius: 24px; background-color: #6750a4; color: white; cursor: pointer; }
-    #wheelContainer { position: relative; width: 300px; height: 300px; margin: 30px auto 10px; }
-    .wheelImage { width: 100%; height: 100%; border-radius: 50%; transform: rotate(0deg); transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1); }
-    .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-               width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent;
-               border-bottom: 25px solid red; z-index: 10; }
-    .result { font-size: 20px; margin-top: 16px; color: green; }
-    #optionList { max-width: 500px; margin: 24px auto; background-color: #444; color: white;
-                  border-radius: 10px; padding: 12px; text-align: left; }
-    .option-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #666; }
-    .option-item:last-child { border-bottom: none; }
-    .delete-btn { background: none; border: none; color: red; font-size: 14px; cursor: pointer; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f4f4;
+      color: #1c1b1f;
+      text-align: center;
+      padding: 20px;
+    }
+    textarea {
+      width: 100%;
+      max-width: 500px;
+      height: 100px;
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 24px;
+      background-color: #6750a4;
+      color: white;
+      cursor: pointer;
+    }
+    #wheelContainer {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 30px auto 10px;
+    }
+    .wheelImage {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      transform: rotate(0deg);
+      transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+    }
+    .pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 25px solid red;
+      z-index: 10;
+    }
+    .result {
+      font-size: 20px;
+      margin-top: 16px;
+      color: green;
+    }
+    #optionList {
+      max-width: 500px;
+      margin: 24px auto;
+      background-color: #444;
+      color: white;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: left;
+    }
+    .option-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #666;
+    }
+    .option-item:last-child {
+      border-bottom: none;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: red;
+      font-size: 14px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>食物選擇器（修正版）</h1>
+  <h1>食物選擇器</h1>
   <textarea id="optionInput" placeholder="輸入選項，每行一個"></textarea><br>
   <button onclick="addOptions()">新增</button>
   <button onclick="clearOptions()">清除</button>
   <button onclick="spinWheel()">轉盤</button>
-  <br>
-  <label for="noRepeatRange">防止重複抽選時間：</label>
-  <select id="noRepeatRange">
-    <option value="0">不限</option>
-    <option value="1d">一天內</option>
-    <option value="7d">一週內</option>
-    <option value="30d">一個月內</option>
-  </select>
 
   <div id="wheelContainer">
     <div class="pointer"></div>
@@ -47,6 +102,7 @@
   <div id="optionList"><strong>目前選項：</strong><div id="optionItems"></div></div>
 
   <script>
+    // Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyDN4FPMp2NS3hTDVpKgyjXJS-zQIbTbmn8",
       authDomain: "food-chosen-55cc7.firebaseapp.com",
@@ -60,7 +116,6 @@
     const db = firebase.database();
 
     let options = [];
-    let lastPicks = {};
     let currentRotation = 0;
     const wheelImg = document.getElementById("wheelImage");
 
@@ -68,11 +123,6 @@
       const data = snapshot.val();
       options = Array.isArray(data) ? data : [];
       renderOptionList();
-    });
-
-    db.ref("history").on("value", snapshot => {
-      const data = snapshot.val();
-      lastPicks = typeof data === 'object' ? data : {};
     });
 
     function renderOptionList() {
@@ -87,28 +137,17 @@
       });
     }
 
-    function getNoRepeatLimitMs() {
-      const range = document.getElementById("noRepeatRange").value;
-      if (range === "1d") return 86400000;
-      if (range === "7d") return 604800000;
-      if (range === "30d") return 2592000000;
-      return 0;
-    }
-
     function addOptions() {
       const input = document.getElementById("optionInput").value.trim();
       if (!input) return;
-      const newItems = input.split("\n").join("
-").split("
-").map(o => o.trim()).filter(o => o);
+      const newItems = input.split("\n").map(o => o.trim()).filter(o => o);
       const updatedOptions = [...options, ...newItems];
       db.ref("options").set(updatedOptions);
       document.getElementById("optionInput").value = '';
     }
 
     function deleteOption(index) {
-      const name = options[index];
-      if (confirm(`確定要刪除「${name}」這個選項嗎？`)) {
+      if (index >= 0 && index < options.length) {
         const updatedOptions = [...options];
         updatedOptions.splice(index, 1);
         db.ref("options").set(updatedOptions);
@@ -118,7 +157,6 @@
     function clearOptions() {
       if (confirm("確定要清除所有選項？")) {
         db.ref("options").set([]);
-        db.ref("history").set({});
         document.getElementById("result").textContent = '';
       }
     }
@@ -128,29 +166,18 @@
         alert("請先新增選項！");
         return;
       }
-      const limit = getNoRepeatLimitMs();
-      const now = Date.now();
-      const available = options.filter(o => !lastPicks[o] || (now - lastPicks[o]) > limit);
-
-      if (available.length === 0) {
-        alert("目前沒有可抽的選項（依照防重複設定）");
-        return;
-      }
-
       const fullSpins = 5;
       const degreesPerOption = 360 / options.length;
-      const selectedOption = available[Math.floor(Math.random() * available.length)];
-      const selectedIndex = options.indexOf(selectedOption);
+      const selectedIndex = Math.floor(Math.random() * options.length);
       const rotateTo = (360 - selectedIndex * degreesPerOption) + fullSpins * 360;
       currentRotation += rotateTo;
       wheelImg.style.transform = `rotate(${currentRotation}deg)`;
 
       setTimeout(() => {
-        document.getElementById("result").textContent = `結果：${selectedOption}`;
-        lastPicks[selectedOption] = Date.now();
-        db.ref("history").set(lastPicks);
+        document.getElementById("result").textContent = `結果：${options[selectedIndex]}`;
       }, 5000);
     }
   </script>
 </body>
 </html>
+
