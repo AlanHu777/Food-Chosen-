@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>多人共用輪盤</title>
+  <title>食物選擇器</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -29,8 +29,30 @@
       color: white;
       cursor: pointer;
     }
-    canvas {
-      margin-top: 20px;
+    #wheelContainer {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 30px auto 10px;
+    }
+    .wheelImage {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      transform: rotate(0deg);
+      transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+    }
+    .pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 25px solid red;
+      z-index: 10;
     }
     .result {
       font-size: 20px;
@@ -40,12 +62,17 @@
   </style>
 </head>
 <body>
-  <h1>多人即時共用輪盤</h1>
+  <h1>食物選擇器</h1>
   <textarea id="optionInput" placeholder="輸入選項，每行一個"></textarea><br>
   <button onclick="addOptions()">新增</button>
   <button onclick="clearOptions()">清除</button>
-  <button onclick="spinWheel()">轉輪</button>
-  <canvas id="wheel" width="300" height="300"></canvas>
+  <button onclick="spinWheel()">轉盤</button>
+
+  <div id="wheelContainer">
+    <div class="pointer"></div>
+    <img id="wheelImage" class="wheelImage" src="wheel_image.jpg" alt="轉盤圖片">
+  </div>
+
   <div class="result" id="result"></div>
 
   <script>
@@ -63,41 +90,14 @@
     const db = firebase.database();
 
     let options = [];
-    let spinning = false;
-    let startAngle = 0;
-    const canvas = document.getElementById("wheel");
-    const ctx = canvas.getContext("2d");
-    const radius = canvas.width / 2;
+    let currentRotation = 0;
+    const wheelImg = document.getElementById("wheelImage");
 
-    function drawWheel() {
-      const arc = 2 * Math.PI / options.length;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = 0; i < options.length; i++) {
-        const angle = startAngle + i * arc;
-        ctx.beginPath();
-        ctx.fillStyle = `hsl(${(i * 360 / options.length)}, 70%, 70%)`;
-        ctx.moveTo(radius, radius);
-        ctx.arc(radius, radius, radius, angle, angle + arc);
-        ctx.fill();
-        ctx.save();
-        ctx.translate(radius, radius);
-        ctx.rotate(angle + arc / 2);
-        ctx.fillStyle = "#000";
-        ctx.textAlign = "right";
-        ctx.font = "bold 14px Roboto";
-        ctx.fillText(options[i], radius - 10, 5);
-        ctx.restore();
-      }
-    }
-
-    function renderOptionsFromDB(snapshot) {
+    // 讀取資料庫中的選項
+    db.ref("options").on("value", snapshot => {
       const data = snapshot.val();
       options = Array.isArray(data) ? data : [];
-      drawWheel();
-    }
-
-    // 初始化監聽資料庫
-    db.ref("options").on("value", renderOptionsFromDB);
+    });
 
     function addOptions() {
       const input = document.getElementById("optionInput").value.trim();
@@ -116,36 +116,20 @@
     }
 
     function spinWheel() {
-      if (spinning || options.length === 0) return;
-      spinning = true;
-      const spinAngle = Math.random() * 360 + 1440; // 多圈
-      const duration = 5000;
-      let startTime = null;
-
-      function animate(timestamp) {
-        if (!startTime) startTime = timestamp;
-        const elapsed = timestamp - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        const currentAngle = (spinAngle * easeOut) * Math.PI / 180;
-        startAngle = currentAngle % (2 * Math.PI);
-        drawWheel();
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          spinning = false;
-          showResult();
-        }
+      if (options.length === 0) {
+        alert("請先新增選項！");
+        return;
       }
+      const fullSpins = 5;
+      const degreesPerOption = 360 / options.length;
+      const selectedIndex = Math.floor(Math.random() * options.length);
+      const rotateTo = (360 - selectedIndex * degreesPerOption) + fullSpins * 360;
+      currentRotation += rotateTo;
+      wheelImg.style.transform = `rotate(${currentRotation}deg)`;
 
-      requestAnimationFrame(animate);
-    }
-
-    function showResult() {
-      const arc = 2 * Math.PI / options.length;
-      const selectedIndex = Math.floor((2 * Math.PI - startAngle + arc / 2) % (2 * Math.PI) / arc) % options.length;
-      const selectedOption = options[selectedIndex];
-      document.getElementById("result").textContent = `結果：${selectedOption}`;
+      setTimeout(() => {
+        document.getElementById("result").textContent = `結果：${options[selectedIndex]}`;
+      }, 5000);
     }
   </script>
 </body>
