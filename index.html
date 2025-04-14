@@ -2,92 +2,29 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>食物選擇器</title>
+  <title>食物選擇器（修正版）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      background-color: #f4f4f4;
-      color: #1c1b1f;
-      text-align: center;
-      padding: 20px;
-    }
-    textarea {
-      width: 100%;
-      max-width: 500px;
-      height: 100px;
-      margin-top: 10px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 24px;
-      background-color: #6750a4;
-      color: white;
-      cursor: pointer;
-    }
-    #wheelContainer {
-      position: relative;
-      width: 300px;
-      height: 300px;
-      margin: 30px auto 10px;
-    }
-    .wheelImage {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      transform: rotate(0deg);
-      transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
-    }
-    .pointer {
-      position: absolute;
-      top: -10px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 15px solid transparent;
-      border-right: 15px solid transparent;
-      border-bottom: 25px solid red;
-      z-index: 10;
-    }
-    .result {
-      font-size: 20px;
-      margin-top: 16px;
-      color: green;
-    }
-    #optionList {
-      max-width: 500px;
-      margin: 24px auto;
-      background-color: #444;
-      color: white;
-      border-radius: 10px;
-      padding: 12px;
-      text-align: left;
-    }
-    .option-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      border-bottom: 1px solid #666;
-    }
-    .option-item:last-child {
-      border-bottom: none;
-    }
-    .delete-btn {
-      background: none;
-      border: none;
-      color: red;
-      font-size: 14px;
-      cursor: pointer;
-    }
+    body { font-family: 'Roboto', sans-serif; background-color: #f4f4f4; color: #1c1b1f; text-align: center; padding: 20px; }
+    textarea { width: 100%; max-width: 500px; height: 100px; margin-top: 10px; }
+    button { margin: 5px; padding: 10px 16px; border: none; border-radius: 24px; background-color: #6750a4; color: white; cursor: pointer; }
+    #wheelContainer { position: relative; width: 300px; height: 300px; margin: 30px auto 10px; }
+    .wheelImage { width: 100%; height: 100%; border-radius: 50%; transform: rotate(0deg); transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1); }
+    .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+               width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent;
+               border-bottom: 25px solid red; z-index: 10; }
+    .result { font-size: 20px; margin-top: 16px; color: green; }
+    #optionList { max-width: 500px; margin: 24px auto; background-color: #444; color: white;
+                  border-radius: 10px; padding: 12px; text-align: left; }
+    .option-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #666; }
+    .option-item:last-child { border-bottom: none; }
+    .delete-btn { background: none; border: none; color: red; font-size: 14px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1>食物選擇器</h1>
+  <h1>食物選擇器（修正版）</h1>
   <textarea id="optionInput" placeholder="輸入選項，每行一個"></textarea><br>
   <button onclick="addOptions()">新增</button>
   <button onclick="clearOptions()">清除</button>
@@ -123,9 +60,8 @@
     const db = firebase.database();
 
     let options = [];
-    let currentRotation = 0;
     let lastPicks = {};
-
+    let currentRotation = 0;
     const wheelImg = document.getElementById("wheelImage");
 
     db.ref("options").on("value", snapshot => {
@@ -139,14 +75,6 @@
       lastPicks = typeof data === 'object' ? data : {};
     });
 
-    function getNoRepeatLimitMs() {
-      const range = document.getElementById("noRepeatRange").value;
-      if (range === "1d") return 86400000;
-      if (range === "7d") return 604800000;
-      if (range === "30d") return 2592000000;
-      return 0;
-    }
-
     function renderOptionList() {
       const container = document.getElementById("optionItems");
       container.innerHTML = "";
@@ -159,10 +87,20 @@
       });
     }
 
+    function getNoRepeatLimitMs() {
+      const range = document.getElementById("noRepeatRange").value;
+      if (range === "1d") return 86400000;
+      if (range === "7d") return 604800000;
+      if (range === "30d") return 2592000000;
+      return 0;
+    }
+
     function addOptions() {
       const input = document.getElementById("optionInput").value.trim();
       if (!input) return;
-      const newItems = input.split("\n").map(o => o.trim()).filter(o => o);
+      const newItems = input.split("\n").join("
+").split("
+").map(o => o.trim()).filter(o => o);
       const updatedOptions = [...options, ...newItems];
       db.ref("options").set(updatedOptions);
       document.getElementById("optionInput").value = '';
