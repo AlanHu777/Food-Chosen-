@@ -25,7 +25,7 @@
       padding: 10px 16px;
       border: none;
       border-radius: 24px;
-      background-color: #6750a4;
+      background-color: #9faafc;
       color: white;
       cursor: pointer;
     }
@@ -80,9 +80,65 @@
     .delete-btn {
       background: none;
       border: none;
-      color: red;
+      color: #9faafc;
       font-size: 14px;
       cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* Material You 對話框樣式 */
+    #confirmDialog {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .dialog-overlay {
+      position: absolute;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.3);
+    }
+    .dialog-box {
+      position: relative;
+      background: white;
+      color: #1c1b1f;
+      padding: 24px;
+      border-radius: 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      max-width: 80%;
+      width: 300px;
+      text-align: center;
+      z-index: 1;
+      animation: scaleIn 0.3s ease;
+    }
+    .dialog-text {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .dialog-buttons {
+      display: flex;
+      justify-content: space-around;
+    }
+    .dialog-btn {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .dialog-btn.cancel {
+      background-color: #e0e0e0;
+      color: #333;
+    }
+    .dialog-btn.confirm {
+      background-color: #9faafc;
+      color: white;
+    }
+    @keyframes scaleIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
   </style>
 </head>
@@ -100,6 +156,18 @@
 
   <div class="result" id="result"></div>
   <div id="optionList"><strong>目前選項：</strong><div id="optionItems"></div></div>
+
+  <!-- Material You 確認對話框 -->
+  <div id="confirmDialog">
+    <div class="dialog-overlay"></div>
+    <div class="dialog-box">
+      <div class="dialog-text" id="dialogMessage">你確定要刪除嗎？</div>
+      <div class="dialog-buttons">
+        <button class="dialog-btn cancel" onclick="closeDialog()">取消</button>
+        <button class="dialog-btn confirm" id="confirmDeleteBtn">刪除</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Firebase 設定
@@ -140,18 +208,10 @@
     function addOptions() {
       const input = document.getElementById("optionInput").value.trim();
       if (!input) return;
-      const newItems = input.split("\n").map(o => o.trim()).filter(o => o);
+      const newItems = input.split("\n").map(o => o.trim()).filter(o => o && !options.includes(o));
       const updatedOptions = [...options, ...newItems];
       db.ref("options").set(updatedOptions);
       document.getElementById("optionInput").value = '';
-    }
-
-    function deleteOption(index) {
-      if (index >= 0 && index < options.length) {
-        const updatedOptions = [...options];
-        updatedOptions.splice(index, 1);
-        db.ref("options").set(updatedOptions);
-      }
     }
 
     function clearOptions() {
@@ -177,7 +237,29 @@
         document.getElementById("result").textContent = `結果：${options[selectedIndex]}`;
       }, 5000);
     }
+
+    // Material You 對話框邏輯
+    let deleteIndex = null;
+
+    function deleteOption(index) {
+      deleteIndex = index;
+      document.getElementById("dialogMessage").textContent = `確定要刪除「${options[index]}」嗎？`;
+      document.getElementById("confirmDialog").style.display = "flex";
+    }
+
+    function closeDialog() {
+      document.getElementById("confirmDialog").style.display = "none";
+      deleteIndex = null;
+    }
+
+    document.getElementById("confirmDeleteBtn").onclick = function () {
+      if (deleteIndex !== null) {
+        const updatedOptions = [...options];
+        updatedOptions.splice(deleteIndex, 1);
+        db.ref("options").set(updatedOptions);
+      }
+      closeDialog();
+    };
   </script>
 </body>
 </html>
-
