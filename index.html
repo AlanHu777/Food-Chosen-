@@ -59,6 +59,31 @@
       margin-top: 16px;
       color: green;
     }
+    #optionList {
+      max-width: 500px;
+      margin: 24px auto;
+      background-color: #444;
+      color: white;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: left;
+    }
+    .option-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #666;
+    }
+    .option-item:last-child {
+      border-bottom: none;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: red;
+      font-size: 14px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -74,6 +99,7 @@
   </div>
 
   <div class="result" id="result"></div>
+  <div id="optionList"><strong>目前選項：</strong><div id="optionItems"></div></div>
 
   <script>
     // Firebase 設定
@@ -93,11 +119,23 @@
     let currentRotation = 0;
     const wheelImg = document.getElementById("wheelImage");
 
-    // 讀取資料庫中的選項
     db.ref("options").on("value", snapshot => {
       const data = snapshot.val();
       options = Array.isArray(data) ? data : [];
+      renderOptionList();
     });
+
+    function renderOptionList() {
+      const container = document.getElementById("optionItems");
+      container.innerHTML = "";
+      options.forEach((option, index) => {
+        const div = document.createElement("div");
+        div.className = "option-item";
+        div.innerHTML = `<span>${option}</span>
+                         <button class="delete-btn" onclick="deleteOption(${index})">刪除</button>`;
+        container.appendChild(div);
+      });
+    }
 
     function addOptions() {
       const input = document.getElementById("optionInput").value.trim();
@@ -106,6 +144,14 @@
       const updatedOptions = [...options, ...newItems];
       db.ref("options").set(updatedOptions);
       document.getElementById("optionInput").value = '';
+    }
+
+    function deleteOption(index) {
+      if (index >= 0 && index < options.length) {
+        const updatedOptions = [...options];
+        updatedOptions.splice(index, 1);
+        db.ref("options").set(updatedOptions);
+      }
     }
 
     function clearOptions() {
